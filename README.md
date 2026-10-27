@@ -1,76 +1,83 @@
-# BM Habits — AI habit tracker
+BM Habits — Versions A and B
+BM Habits is a Flutter habit-tracking app developed for the study “Development and Usability Evaluation of a Mobile Habit-Tracking Application with AI.” It supports two study groups: Version A (habit tracking without AI) and Version B (the same tracker with AI recommendations and a chat coach).
 
-Flutter / Dart mobile app for the study "Development and Usability Evaluation
-of a Mobile Habit-Tracking Application with AI".
+Version A and Version B
+Both versions share the same habit-tracking experience. This lets a study compare the effect of AI support while keeping the core app consistent.
 
-Animated branded splash appears while Firebase restores the session.
+Area	Version A — tracking only	Version B — AI-assisted
+Create and manage habits	Yes	Yes
+Build habits and avoid habits	Yes	Yes
+Daily success or lapse check-ins	Yes	Yes
+Record reasons and notes for a lapse	Yes	Yes
+Review missed or unrecorded days	Yes	Yes
+Current and best streaks, completion rate, and history	Yes	Yes
+Personalised AI risk estimates and tips	No	Yes, after at least 7 days of history
+Conversational AI habit coach	No	Yes
+Version A — tracking only
+Version A gives participants the core tools to build or quit habits: create a routine, record daily outcomes, reflect on lapses, and review progress. It does not show AI recommendations or provide the AI coach. Habit information is still stored in the participant's account and synced through Firebase.
 
-The app includes personalised AI recommendations and a conversational habit
-coach. AI features require the separately deployed recommendation API; configure
-its URL with the `AI_SERVICE_URL` Dart define when building or running the app.
+Version B — AI-assisted tracking
+Version B includes every Version A feature and adds two AI tools:
 
-## Features
-- Create habits of two types: **build** (do it) and **quit** (avoid it)
-- Daily check-in: tap to complete; for quit habits, "I held on" or "I slipped"
-  (with an optional trigger)
-- Current streak, best streak, 30-day completion rate
-- History: 7-day strip per habit, 5-week heatmap, recent activity
-- Sign up / log in (name, email, password), session is remembered, log out in Profile
-- Habits are stored separately per user
-- Firebase Authentication for email/password accounts
-- Cloud Firestore in project `habit-tracker-797b8`, database `(default)`, region `eur3`
-- Habits and daily entries: `users/{uid}/habits/{habitId}`; rules restrict access to the owner
-- Live updates across devices. Persistent Firestore caching is disabled.
-- Existing local prototype accounts and habits are not migrated; register a Firebase account.
-- AI risk estimates and short personalised tips based on habit check-ins.
-- AI habit coach chat, which receives a limited summary of the user's habits
-  and recent check-ins to suggest practical next steps.
+Personalised tips: On the Today screen, the app can show short tips and a risk level for habits. It sends up to 60 days of success/missed history, habit type, category, target weekday, and self-reported lapse reasons from the previous 14 days to the recommendation service. At least 7 days of history are required before a recommendation is requested.
+AI habit coach: Open the coach from the Today screen to ask for ideas or discuss a challenge. The app sends summaries for up to 12 habits and up to the 12 most recent chat messages. The conversation is kept in memory while the app is open.
+AI tools need the separately deployed backend configured below. If the service is unreachable, recommendations may not appear and the coach may report that it cannot connect. The chat backend can also enforce a temporary usage quota.
 
-## Daily routine and reflections
-- First-time users select daily build/quit habits or add their own. Choices persist in Firestore.
-- Today offers done/held-on and missed/slipped check-ins, with optional multiple factors and a note.
-- Unrecorded past days remain unknown. A review card offers the last 7 days; the habit calendar allows editing older visible dates.
-- Review happens inside the app on return; no scheduled or push notifications are configured.
-- Entry fields include `success`, `timestamp` (recorded time), `reasons` (stable factor codes), and `note`. The entries map key identifies the habit day, including retrospective records.
-- Reasons are self-reported. The AI service uses up to 60 days of success/missed
-  history and reasons from the last 14 days to generate recommendations. Tips
-  appear after at least 7 days of history. The coach receives summaries for up
-  to 12 habits and the most recent 12 chat messages. Chat history is kept in
-  memory while the app is open.
-- AI responses depend on the separately hosted backend. If it is unavailable,
-  AI cards may be hidden and the coach will show a connection message. The chat
-  API may also enforce a temporary quota.
+Assigning a study version
+The app reads the participant's group from the group field on the Firestore document users/{uid}. Set it to A or B for each participant. If the field is missing or the group cannot be read, the app defaults to Version A. A developer-only override is available for local UI checks:
 
-## Run
-```bash
-cd habit_tracker
-flutter create . --platforms=android,ios --org kz.aitu   # generates android/ and ios/
+flutter run --dart-define=FORCE_GROUP=B
+Do not use this override for participant builds. It is intended only for testing the Version B interface. The study group controls whether AI recommendations and the coach entry point are shown. Version A participants see only the shared habit-tracking features.
+
+Shared habit-tracking features
+Create build habits (actions to do) and quit habits (actions to avoid).
+Choose suggested daily habits during first-time setup or create custom ones.
+Record daily outcomes. A lapse can include one or more reasons and an optional note.
+Review unrecorded days from the last week; edit older dates in a habit's calendar where available. Unrecorded days remain unknown until reviewed.
+View current and best streaks, a 30-day completion rate, recent activity, a seven-day strip, and a five-week heatmap.
+Create an account and sign in with email and password. Each user's habits are stored under their own Firestore account path and synced live across devices.
+The app does not configure scheduled or push reminders.
+Technology and data
+Flutter and Dart
+Firebase Authentication for email/password sign-in
+Cloud Firestore for user group assignment, habits, and check-in records
+A separately deployed HTTP API for AI recommendations and coach chat
+Each habit entry stores a success value, recording timestamp, optional reasons, and optional note. The date key identifies the habit day, including entries added during a retrospective review. Reasons are self-reported by the user.
+
+Requirements
+Flutter SDK compatible with Dart >=3.3.0 <4.0.0
+Firebase project configured for the target platform
+For Version B: a reachable AI service implementing POST /recommend and POST /chat
+Setup and run
+From the repository root:
+
 flutter pub get
-flutter test
 flutter run
-```
-`flutter create .` does not overwrite the existing `lib/` and `test/` files.
+The repository includes Android and iOS platform folders. If regenerating platform scaffolding is necessary, run flutter create . from the repository root and review the generated changes before committing them.
 
-## Structure
-```
-lib/
-  main.dart                    app shell + bottom navigation
-  theme.dart                   colours, card style, Material 3 theme
-  models/habit.dart            Habit, Entry, streak logic
-  services/habit_store.dart    Firestore persistence
-  utils/dates.dart             date helpers
-  screens/                     today, history, add habit, habit detail
-```
+To run the automated test suite:
 
-## AI service configuration
-Set `AI_SERVICE_URL` in `lib/config.dart` or pass it as a Dart define, for
-example:
+flutter test
+Firebase platform configuration is provided in the platform-specific files and lib/firebase_options.dart. Use the Firebase project configuration intended for your app and deployment environment.
 
-```bash
+AI service configuration
+The default AI API URL is configured in lib/config.dart. Override it when running or building the app with the AI_SERVICE_URL Dart define:
+
 flutter run --dart-define=AI_SERVICE_URL=https://habit-tracking-application-with-ai.onrender.com
-```
+The base URL should point to the deployed service; the app appends /recommend and /chat for the corresponding requests. The request client is implemented in lib/services/ai_service.dart.
 
-The backend must provide `POST /recommend` and `POST /chat` endpoints. The
-app's API client is in `lib/services/ai_service.dart`; the recommendations
-card and coach screen are in `lib/widgets/ai_tips_section.dart` and
-`lib/screens/ai_coach_screen.dart`.
+Project structure
+lib/
+  main.dart                    App startup, authentication gate, navigation
+  config.dart                  AI service URL
+  models/habit.dart            Habit and entry models, streak calculations
+  services/
+    auth_service.dart          Firebase Authentication
+    habit_store.dart           Firestore persistence and study group loading
+    ai_service.dart            AI recommendation and chat API client
+  screens/
+    today_screen.dart          Daily progress, check-ins, AI entry points
+    history_screen.dart        Habit history and activity views
+    ai_coach_screen.dart       Conversational AI coach
+  widgets/
+    ai_tips_section.dart       Personalised recommendation cards
